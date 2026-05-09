@@ -8,6 +8,7 @@ from typing import Any
 
 import pandas as pd
 from bs4 import BeautifulSoup
+from tqdm import tqdm
 
 from .base import BaseScraper
 from ..utils import normalize_name, american_to_implied_prob, devig_odds
@@ -190,7 +191,7 @@ class OddsScraper(BaseScraper):
         events = self.scrape_event_list()
         all_fights = []
 
-        for event in events:
+        for event in tqdm(events, desc="Scraping odds", unit="event"):
             try:
                 fights = self.scrape_event_odds(event["event_url"])
                 for fight in fights:

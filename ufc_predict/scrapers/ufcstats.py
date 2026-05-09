@@ -8,6 +8,7 @@ from typing import Any
 
 import pandas as pd
 from bs4 import BeautifulSoup
+from tqdm import tqdm
 
 from .base import BaseScraper
 from ..utils import parse_date, parse_fight_time, fight_duration_seconds, normalize_name
@@ -220,7 +221,7 @@ class UFCStatsScraper(BaseScraper):
         events = self.scrape_all_events()
         all_fights = []
 
-        for event in events:
+        for event in tqdm(events, desc="Scraping UFC events", unit="event"):
             try:
                 fights = self.scrape_event(
                     event["event_url"],

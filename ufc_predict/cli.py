@@ -45,21 +45,28 @@ def scrape(ctx, source, output):
     output_dir = Path(output)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    import time
+    start = time.time()
+
     if source in ("ufcstats", "all"):
-        click.echo("Scraping UFC Stats...")
+        click.echo("Scraping UFC Stats (this may take a few minutes)...")
         scraper = UFCStatsScraper(cache_dir="data/cache")
         df = scraper.scrape_all()
         df.to_csv(output_dir / "ufcstats_fights.csv", index=False)
-        click.echo(f"  Saved {len(df)} fights to ufcstats_fights.csv")
+        elapsed = time.time() - start
+        click.echo(f"  ✓ Saved {len(df)} fights to ufcstats_fights.csv ({elapsed:.0f}s)")
 
     if source in ("odds", "all"):
+        odds_start = time.time()
         click.echo("Scraping BestFightOdds...")
         scraper = OddsScraper(cache_dir="data/cache")
         df = scraper.scrape_all()
         df.to_csv(output_dir / "odds_data.csv", index=False)
-        click.echo(f"  Saved {len(df)} fight odds to odds_data.csv")
+        elapsed = time.time() - odds_start
+        click.echo(f"  ✓ Saved {len(df)} fight odds to odds_data.csv ({elapsed:.0f}s)")
 
-    click.echo("Done!")
+    total = time.time() - start
+    click.echo(f"\nDone! Total time: {total:.0f}s")
 
 
 @cli.command()
