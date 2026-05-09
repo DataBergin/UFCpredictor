@@ -68,45 +68,46 @@ class UFCStatsScraper(BaseScraper):
         soup = BeautifulSoup(html, "lxml")
         fights = []
 
-        rows = soup.select("tr.b-fight-details__table-row")
+        rows = soup.select("tr.js-fight-details-click")
         for i, row in enumerate(rows):
             cols = row.select("td")
             if len(cols) < 10:
                 continue
 
-            links = row.select("a")
-            fight_link = None
-            for a in links:
-                href = a.get("href", "")
-                if "fight-details" in href:
-                    fight_link = href.strip()
-                    break
+            # Fight details URL from data-link attribute or first link
+            fight_link = row.get("data-link", "").strip()
+            if not fight_link:
+                flag_link = cols[0].select_one("a")
+                if flag_link:
+                    fight_link = flag_link.get("href", "").strip()
 
-            fighter_links = row.select("td:first-child a.b-link")
+            # Fighter names from td[1] which has two <a> links
+            fighter_links = cols[1].select("a")
             if len(fighter_links) < 2:
                 continue
 
             fighter_a = fighter_links[0].get_text(strip=True)
             fighter_b = fighter_links[1].get_text(strip=True)
-
             fighter_a_url = fighter_links[0].get("href", "").strip()
             fighter_b_url = fighter_links[1].get("href", "").strip()
 
-            method_col = cols[7] if len(cols) > 7 else None
-            method = method_col.get_text(strip=True) if method_col else ""
+            # Win/loss from td[0] text
+            result_text = cols[0].get_text(strip=True).lower()
+            winner = fighter_a if "win" in result_text else fighter_b
 
-            round_col = cols[8] if len(cols) > 8 else None
-            round_num = round_col.get_text(strip=True) if round_col else ""
+            # Weight class from td[6]
+            weight_class = cols[6].get_text(strip=True) if len(cols) > 6 else ""
 
-            time_col = cols[9] if len(cols) > 9 else None
-            time_str = time_col.get_text(strip=True) if time_col else ""
+            # Method from td[7] — first <p> is the method type
+            method_ps = cols[7].select("p") if len(cols) > 7 else []
+            method = method_ps[0].get_text(strip=True) if method_ps else ""
+            method_detail = method_ps[1].get_text(strip=True) if len(method_ps) > 1 else ""
 
-            win_marker = cols[0].select_one("i.b-flag__inner")
-            winner = None
-            if win_marker:
-                win_text = win_marker.get_text(strip=True).lower()
-                if "win" in win_text:
-                    winner = fighter_a
+            # Round from td[8]
+            round_num = cols[8].get_text(strip=True) if len(cols) > 8 else ""
+
+            # Time from td[9]
+            time_str = cols[9].get_text(strip=True) if len(cols) > 9 else ""
 
             fight = {
                 "event_name": event_name,
@@ -116,10 +117,12 @@ class UFCStatsScraper(BaseScraper):
                 "fighter_b": fighter_b,
                 "fighter_a_url": fighter_a_url,
                 "fighter_b_url": fighter_b_url,
-                "winner": winner if winner else fighter_b,
+                "winner": winner,
                 "method": method,
+                "method_detail": method_detail,
                 "round": round_num,
                 "time": time_str,
+                "weight_class": weight_class,
                 "card_position": i,
             }
             fights.append(fight)

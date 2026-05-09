@@ -113,20 +113,33 @@ class OddsScraper(BaseScraper):
 
     def scrape_event_list(self) -> list[dict[str, str]]:
         """Get list of all events with odds data."""
-        url = f"{BASE_URL}/events"
-        html = self.fetch(url)
-        soup = BeautifulSoup(html, "lxml")
-
         events = []
-        links = soup.select("a[href*='/events/']")
-        for link in links:
-            href = link.get("href", "")
-            name = link.get_text(strip=True)
-            if name and "UFC" in name.upper():
-                full_url = href if href.startswith("http") else BASE_URL + href
-                events.append({"event_name": name, "event_url": full_url})
 
-        return events
+        # Scrape both the main page and archive for event links
+        for page_url in [BASE_URL, f"{BASE_URL}/archive"]:
+            try:
+                html = self.fetch(page_url)
+                soup = BeautifulSoup(html, "lxml")
+                links = soup.select("a[href*='/events/']")
+                for link in links:
+                    href = link.get("href", "")
+                    name = link.get_text(strip=True)
+                    if name and "UFC" in name.upper():
+                        full_url = href if href.startswith("http") else BASE_URL + href
+                        events.append({"event_name": name, "event_url": full_url})
+            except Exception as e:
+                logger.warning(f"Failed to fetch {page_url}: {e}")
+
+        # Deduplicate by URL
+        seen = set()
+        unique = []
+        for ev in events:
+            if ev["event_url"] not in seen:
+                seen.add(ev["event_url"])
+                unique.append(ev)
+
+        logger.info(f"Found {len(unique)} UFC events with odds")
+        return unique
 
     def scrape_fighter_odds_history(self, fighter_name: str) -> list[dict[str, Any]]:
         """Scrape historical odds for a specific fighter."""
