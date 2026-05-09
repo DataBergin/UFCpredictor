@@ -22,35 +22,56 @@ class OddsScraper(BaseScraper):
     SOURCE_NAME = "odds"
 
     def scrape_event_odds(self, event_url: str) -> list[dict[str, Any]]:
-        """Scrape odds for all fights in an event."""
+        """Scrape odds for all fights in an event.
+
+        BFO uses two side-by-side tables: table[0] has fighter names,
+        table[1] has the odds values. Fighter rows come in consecutive
+        pairs (no 'pr' class); prop bet rows have class 'pr'.
+        """
         html = self.fetch(event_url)
         soup = BeautifulSoup(html, "lxml")
 
         fights = []
-        table = soup.select_one("table.odds-table, table.content-list")
-        if not table:
+        tables = soup.select("table.odds-table")
+        if len(tables) < 2:
             return fights
 
-        rows = table.select("tr")
+        odds_table = tables[1]
+        rows = odds_table.select("tr")
+
         current_fight: dict[str, Any] = {}
 
         for row in rows:
-            name_el = row.select_one("th.opponentCell a, td.name a")
-            if not name_el:
+            # Skip prop bet rows (over/under, decision, etc.)
+            if "pr" in (row.get("class") or []):
                 continue
 
-            fighter_name = name_el.get_text(strip=True)
-            odds_cells = row.select("td.pointed, td.bestOddsLink, td.odds")
+            # Find fighter link in this row
+            fighter_link = None
+            for a in row.select("a"):
+                if "/fighters/" in a.get("href", ""):
+                    fighter_link = a
+                    break
+            if not fighter_link:
+                continue
+
+            fighter_name = fighter_link.get_text(strip=True)
+
+            # Extract odds from td cells, skipping non-odds cells
+            cells = row.select("td")
             odds_values = []
-            for cell in odds_cells:
+            for cell in cells:
+                cell_classes = cell.get("class") or []
+                if "prop-cell" in cell_classes or "table-prop-header" in cell_classes:
+                    continue
+                if "button-cell" in cell_classes:
+                    continue
                 text = cell.get_text(strip=True)
-                if text and text != "-":
-                    try:
-                        odds_values.append(int(text.replace("+", "")))
-                    except ValueError:
-                        odds_values.append(None)
-                else:
-                    odds_values.append(None)
+                # Skip the first cell if it contains the fighter name (has a /fighters/ link)
+                if cell.select_one("a[href*='/fighters/']"):
+                    continue
+                parsed = self._parse_odds_cell(text)
+                odds_values.append(parsed)
 
             if not current_fight.get("fighter_a"):
                 current_fight = {
@@ -68,6 +89,19 @@ class OddsScraper(BaseScraper):
                 current_fight = {}
 
         return fights
+
+    def _parse_odds_cell(self, text: str) -> int | None:
+        """Parse an odds cell like '-400▲' or '+376' to integer."""
+        if not text or text == "-" or text == "":
+            return None
+        # Strip unicode arrows and whitespace
+        cleaned = re.sub(r'[^\d\+\-]', '', text)
+        if not cleaned:
+            return None
+        try:
+            return int(cleaned)
+        except ValueError:
+            return None
 
     def _compute_odds_features(self, fight: dict[str, Any]) -> dict[str, Any]:
         """Compute derived odds features: opening, closing, movement, devigged probs."""
