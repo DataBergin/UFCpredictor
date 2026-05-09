@@ -164,7 +164,11 @@ class UFCPipeline:
         method_preds = self.method_model.predict(X_test)
 
         # Duration predictions
-        duration_preds = self.duration_model.predict(X_test)
+        if self.duration_model.model is not None:
+            duration_preds = self.duration_model.predict(X_test)
+        else:
+            duration_preds = None
+            logger.warning("Duration model was not trained — skipping duration evaluation")
 
         # Closing line for comparison
         closing_probs = test_df.get("closing_prob_a")
@@ -177,7 +181,7 @@ class UFCPipeline:
             closing_probs=closing_probs,
             method_true=test_df["target_method"].fillna(2).astype(int).values,
             method_pred=method_preds if method_preds.ndim == 2 else None,
-            duration_true=test_df["target_duration_seconds"].values,
+            duration_true=test_df["target_duration_seconds"].values if duration_preds is not None else None,
             duration_pred=duration_preds,
             feature_importance=self.winner_model.feature_importance_combined(),
         )
@@ -226,7 +230,10 @@ class UFCPipeline:
             round_dist = {"R1": 0.15, "R2": 0.15, "R3": 0.20, "Decision": 0.50}
 
         # Duration prediction
-        expected_duration = float(self.duration_model.predict(X)[0])
+        if self.duration_model.model is not None:
+            expected_duration = float(self.duration_model.predict(X)[0])
+        else:
+            expected_duration = 900.0
 
         # SHAP analysis for explainability
         shap_drivers = self._get_shap_drivers(X)
