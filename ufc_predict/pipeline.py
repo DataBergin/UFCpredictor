@@ -41,10 +41,28 @@ class UFCPipeline:
 
     def load_data(self, fights_path: str | Path) -> pd.DataFrame:
         """Load fight data from CSV/parquet."""
+        from .utils import fight_duration_seconds, parse_date
+
         path = Path(fights_path)
         if path.suffix == ".parquet":
-            return pd.read_parquet(path)
-        return pd.read_csv(path)
+            df = pd.read_parquet(path)
+        else:
+            df = pd.read_csv(path)
+
+        # Compute duration_seconds from round + time if missing
+        if "duration_seconds" not in df.columns and "round" in df.columns and "time" in df.columns:
+            df["duration_seconds"] = df.apply(
+                lambda r: fight_duration_seconds(
+                    int(r["round"]) if pd.notna(r["round"]) and str(r["round"]).isdigit() else None,
+                    str(r["time"]) if pd.notna(r["time"]) else ""
+                ), axis=1
+            )
+
+        # Ensure date column exists
+        if "date" not in df.columns and "event_date" in df.columns:
+            df["date"] = df["event_date"].apply(parse_date)
+
+        return df
 
     def prepare_features(self, fights_df: pd.DataFrame,
                          fighter_info: dict[str, dict] | None = None) -> pd.DataFrame:
@@ -199,7 +217,7 @@ class UFCPipeline:
         fight_info = fight_info or {}
         features = self.feature_pipeline.predict_features(fighter_a, fighter_b, fight_info)
 
-        X = pd.DataFrame([features])[self.feature_names].fillna(0)
+        X = pd.DataFrame([features]).reindex(columns=self.feature_names, fill_value=0).fillna(0)
         fighters_a = pd.Series([fighter_a])
         fighters_b = pd.Series([fighter_b])
 

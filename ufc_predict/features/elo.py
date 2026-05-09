@@ -195,6 +195,10 @@ class EloSystem:
             features["elo_div_a"] = da.rating
             features["elo_div_b"] = db.rating
             features["elo_div_diff"] = da.rating - db.rating
+        else:
+            features["elo_div_a"] = self.initial_rating
+            features["elo_div_b"] = self.initial_rating
+            features["elo_div_diff"] = 0.0
 
         return features
 

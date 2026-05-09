@@ -173,13 +173,13 @@ def predict(ctx, fighter_a, fighter_b, date, model, closing_line,
     click.echo(f"\n{'METHOD OF VICTORY':^60}")
     click.echo("-" * 60)
     for method, prob in sorted(result["method_distribution"].items(), key=lambda x: -x[1]):
-        bar = "█" * int(prob * 30)
+        bar = "#" * int(prob * 30)
         click.echo(f"  {method:<12} {prob:>5.1%} {bar}")
 
     click.echo(f"\n{'ROUND DISTRIBUTION':^60}")
     click.echo("-" * 60)
     for round_name, prob in sorted(result["round_distribution"].items()):
-        bar = "█" * int(prob * 30)
+        bar = "#" * int(prob * 30)
         click.echo(f"  {round_name:<10} {prob:>5.1%} {bar}")
 
     click.echo(f"\n{'FIGHT DURATION':^60}")
@@ -196,7 +196,7 @@ def predict(ctx, fighter_a, fighter_b, date, model, closing_line,
         click.echo(f"\n{'TOP PREDICTION DRIVERS':^60}")
         click.echo("-" * 60)
         for driver in result["top_shap_drivers"]:
-            direction = "↑" if driver["direction"] == "+" else "↓"
+            direction = "+" if driver["direction"] == "+" else "-"
             click.echo(f"  {direction} {driver['feature']}: "
                        f"{driver['feature_value']:.3f} (SHAP: {driver['shap_value']:+.3f})")
 
@@ -241,7 +241,7 @@ def run_full(ctx, data, save_model):
     click.echo("\nStep 4: Saving pipeline...")
     pipeline.save(save_model)
 
-    click.echo("\n✓ Pipeline complete!")
+    click.echo("\nPipeline complete!")
 
 
 if __name__ == "__main__":

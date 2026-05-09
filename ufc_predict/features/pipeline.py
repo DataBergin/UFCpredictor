@@ -51,13 +51,22 @@ class FeaturePipeline:
 
         CRITICAL: Features are computed using only data available BEFORE each fight.
         Elo/Glicko update after feature extraction.
+        Fighter A/B assignment is randomized to prevent ordering leakage.
         """
+        import random
+        rng = random.Random(42)
+
         fights_sorted = fights_df.sort_values("date").reset_index(drop=True)
         all_features = []
 
         for idx, row in fights_sorted.iterrows():
             fighter_a = row["fighter_a"]
             fighter_b = row["fighter_b"]
+
+            # Randomize A/B to prevent winner-first ordering leakage
+            if rng.random() < 0.5:
+                fighter_a, fighter_b = fighter_b, fighter_a
+
             fight_date = str(row.get("date", ""))
 
             features = self._extract_features_for_fight(
