@@ -21,15 +21,16 @@ class FightDataset(Dataset):
     def __init__(self, X: np.ndarray, fighter_a_ids: np.ndarray,
                  fighter_b_ids: np.ndarray, y: np.ndarray | None = None,
                  task: str = "winner"):
-        self.X = torch.FloatTensor(X)
-        self.fighter_a_ids = torch.LongTensor(fighter_a_ids)
-        self.fighter_b_ids = torch.LongTensor(fighter_b_ids)
+        self.X = torch.FloatTensor(np.array(X, copy=True))
+        self.fighter_a_ids = torch.LongTensor(np.array(fighter_a_ids, copy=True))
+        self.fighter_b_ids = torch.LongTensor(np.array(fighter_b_ids, copy=True))
         self.task = task
         if y is not None:
+            y_copy = np.array(y, copy=True)
             if task == "duration":
-                self.y = torch.FloatTensor(y)
+                self.y = torch.FloatTensor(y_copy)
             else:
-                self.y = torch.LongTensor(y)
+                self.y = torch.LongTensor(y_copy)
         else:
             self.y = None
 
@@ -135,7 +136,11 @@ class FighterNeuralNet:
         """Train the neural network."""
         self.feature_names = list(X_train.columns)
 
+        # Encode ALL fighters (train + val) before creating the model
+        # so the embedding table is large enough
         ids_a_train, ids_b_train = self._encode_fighters(fighters_a_train, fighters_b_train)
+        if fighters_a_val is not None:
+            self._encode_fighters(fighters_a_val, fighters_b_val)
 
         n_outputs = 1 if self.task in ("winner", "duration") else y_train.nunique()
         self.model = FightNet(
