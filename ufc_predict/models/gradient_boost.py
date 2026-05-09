@@ -44,7 +44,10 @@ class LGBMFightModel:
             "verbose": -1,
         }
         if params:
-            default_params.update(params)
+            # Filter out non-LightGBM params
+            filtered = {k: v for k, v in params.items()
+                        if k not in ("monotone_constraints", "early_stopping_rounds")}
+            default_params.update(filtered)
         self.params = default_params
 
     def _get_objective(self) -> dict[str, Any]:
