@@ -1,0 +1,75 @@
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  odds_dir: "data/odds"
+  cache_dir: "data/cache"
+
+scraping:
+  delay_range: [1.5, 3.5]
+  max_retries: 3
+  timeout: 30
+  user_agent_rotate: true
+
+features:
+  elo:
+    k_factor: 32
+    initial_rating: 1500
+    glicko2_tau: 0.5
+  recency:
+    decay_halflife_fights: 5
+    windows: [3, 5, 10]
+    time_windows_months: [6, 12, 24]
+  age:
+    peak_age: 29
+    decline_rate: 0.02
+
+models:
+  split:
+    train_end: "2022-01-01"
+    val_end: "2024-01-01"
+    # test: 2024-01-01+
+
+  lgbm:
+    n_estimators: 1000
+    learning_rate: 0.05
+    max_depth: 6
+    num_leaves: 31
+    min_child_samples: 20
+    subsample: 0.8
+    colsample_bytree: 0.8
+    reg_alpha: 0.1
+    reg_lambda: 1.0
+    early_stopping_rounds: 50
+    monotone_constraints: {}  # populated at runtime
+
+  xgb:
+    n_estimators: 1000
+    learning_rate: 0.05
+    max_depth: 6
+    min_child_weight: 5
+    subsample: 0.8
+    colsample_bytree: 0.8
+    reg_alpha: 0.1
+    reg_lambda: 1.0
+    early_stopping_rounds: 50
+
+  neural:
+    fighter_embedding_dim: 64
+    hidden_dims: [256, 128, 64]
+    dropout: 0.3
+    learning_rate: 0.001
+    batch_size: 64
+    epochs: 100
+    patience: 15
+
+  meta:
+    method: "logistic"  # logistic or isotonic
+
+evaluation:
+  confidence_threshold: 0.05  # edge vs closing line for bet simulation
+  bet_size: 100
+  min_fights_for_eval: 50
+
+prediction:
+  confidence_interval: 0.90
+  top_shap_features: 5
