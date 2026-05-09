@@ -38,19 +38,22 @@ class UFCStatsScraper(BaseScraper):
 
             found_any = False
             for row in rows:
-                link = row.select_one("a.b-link")
-                if link and link.get("href"):
+                link = row.select_one("a")
+                if link and link.get("href") and "event-details" in link.get("href", ""):
                     event_url = link["href"].strip()
                     event_name = link.get_text(strip=True)
-                    date_td = row.select("td")
-                    event_date = None
-                    if len(date_td) > 0:
-                        date_span = date_td[-1]
-                        event_date = date_span.get_text(strip=True)
+
+                    date_span = row.select_one("span.b-statistics__date")
+                    event_date = date_span.get_text(strip=True) if date_span else None
+
+                    tds = row.select("td")
+                    location = tds[-1].get_text(strip=True) if len(tds) >= 2 else ""
+
                     events.append({
                         "event_url": event_url,
                         "event_name": event_name,
                         "event_date": event_date,
+                        "location": location,
                     })
                     found_any = True
 

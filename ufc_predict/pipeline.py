@@ -63,15 +63,24 @@ class UFCPipeline:
     def split_data(self, feature_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """Time-based train/val/test split."""
         split_cfg = self.config.get("models", {}).get("split", {})
-        train_end = split_cfg.get("train_end", "2022-01-01")
-        val_end = split_cfg.get("val_end", "2024-01-01")
+        train_end = pd.Timestamp(split_cfg.get("train_end", "2022-01-01"))
+        val_end = pd.Timestamp(split_cfg.get("val_end", "2024-01-01"))
 
-        train = feature_df[feature_df["fight_date"] < train_end].copy()
-        val = feature_df[
-            (feature_df["fight_date"] >= train_end) &
-            (feature_df["fight_date"] < val_end)
-        ].copy()
-        test = feature_df[feature_df["fight_date"] >= val_end].copy()
+        dates = pd.to_datetime(feature_df["fight_date"], errors="coerce")
+
+        # If dates couldn't be parsed, fall back to positional split
+        valid_dates = dates.notna().sum()
+        if valid_dates < len(feature_df) * 0.5:
+            logger.warning(f"Only {valid_dates}/{len(feature_df)} fights have valid dates. "
+                           f"Using positional 60/20/20 split instead.")
+            n = len(feature_df)
+            train = feature_df.iloc[:int(n * 0.6)].copy()
+            val = feature_df.iloc[int(n * 0.6):int(n * 0.8)].copy()
+            test = feature_df.iloc[int(n * 0.8):].copy()
+        else:
+            train = feature_df[dates < train_end].copy()
+            val = feature_df[(dates >= train_end) & (dates < val_end)].copy()
+            test = feature_df[dates >= val_end].copy()
 
         logger.info(f"Split: train={len(train)}, val={len(val)}, test={len(test)}")
         return train, val, test
