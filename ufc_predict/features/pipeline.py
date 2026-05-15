@@ -154,7 +154,7 @@ class FeaturePipeline:
         features.update(ctx_feats)
 
         # RAG features (if enabled)
-        if self.rag is not None:
+        if getattr(self, "rag", None) is not None:
             rag_feats = self.rag.get_features(fighter_a, fighter_b, fight_date)
             features.update(rag_feats)
 
