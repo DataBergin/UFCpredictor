@@ -1,5 +1,5 @@
 // ============================================
-// Sports Predict — Frontend Logic
+// Sports Predict — Apple-style Frontend
 // ============================================
 
 const socket = io();
@@ -9,42 +9,66 @@ let currentSport = 'ufc';
 let isRunning = false;
 
 // DOM refs
-const terminal    = document.getElementById('terminal-content');
-const statusText  = document.getElementById('status-text');
-const statusSport = document.getElementById('status-sport');
-const statusBar   = document.getElementById('status-bar');
-const btnCancel   = document.getElementById('btn-cancel');
-const btnClear    = document.getElementById('btn-clear');
+const terminal      = document.getElementById('terminal-content');
+const statusPill    = document.getElementById('status-pill');
+const statusText    = document.getElementById('status-text');
+const statusDot     = document.getElementById('status-dot');
+const connDot       = document.getElementById('connection-dot');
+const btnCancel     = document.getElementById('btn-cancel');
+const btnClear      = document.getElementById('btn-clear');
+const footerSport   = document.getElementById('footer-sport');
 
-// Labels that change per sport
+// Sport-specific labels
 const SPORT_CONFIG = {
     ufc: {
         labelA: 'Fighter A', labelB: 'Fighter B',
         placeholderA: 'Islam Makhachev', placeholderB: 'Charles Oliveira',
         defaultData: 'data/raw/ufcstats_fights.csv',
+        color: '#ff3b30',
     },
     soccer: {
         labelA: 'Home Team', labelB: 'Away Team',
         placeholderA: 'France', placeholderB: 'Argentina',
         defaultData: 'data/raw/world_cup_matches.csv',
+        color: '#34c759',
     },
     mlb: {
         labelA: 'Home Team', labelB: 'Away Team',
         placeholderA: 'NYY', placeholderB: 'BOS',
         defaultData: 'data/raw/mlb_games.csv',
+        color: '#007aff',
     },
 };
 
-// ------------------------------------------------------------------
-// Sport tabs
-// ------------------------------------------------------------------
-document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
+// ============================================
+// Segmented Control (animated pill indicator)
+// ============================================
+
+const segments  = document.querySelectorAll('.segment');
+const indicator = document.querySelector('.segment-indicator');
+
+function updateIndicator() {
+    const active = document.querySelector('.segment.active');
+    if (!active || !indicator) return;
+    indicator.style.width = active.offsetWidth + 'px';
+    indicator.style.transform = `translateX(${active.offsetLeft - active.parentElement.offsetLeft - 2}px)`;
+}
+
+// Set initial indicator position after render
+requestAnimationFrame(() => {
+    requestAnimationFrame(updateIndicator);
+});
+window.addEventListener('resize', updateIndicator);
+
+segments.forEach(seg => {
+    seg.addEventListener('click', () => {
         if (isRunning) return;
 
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        currentSport = tab.dataset.sport;
+        segments.forEach(s => s.classList.remove('active'));
+        seg.classList.add('active');
+        currentSport = seg.dataset.sport;
+
+        updateIndicator();
 
         const cfg = SPORT_CONFIG[currentSport];
         document.getElementById('label-a').textContent = cfg.labelA;
@@ -53,7 +77,7 @@ document.querySelectorAll('.tab').forEach(tab => {
         document.getElementById('entity-b').placeholder = cfg.placeholderB;
         document.getElementById('data-path').placeholder = cfg.defaultData;
 
-        // Show/hide UFC-specific options
+        // UFC-specific options
         const ufcOpts = document.getElementById('ufc-options');
         if (currentSport === 'ufc') {
             ufcOpts.classList.remove('hidden');
@@ -61,54 +85,62 @@ document.querySelectorAll('.tab').forEach(tab => {
             ufcOpts.classList.add('hidden');
         }
 
-        statusSport.textContent = currentSport.toUpperCase();
+        // Update footer badge
+        footerSport.textContent = currentSport.toUpperCase();
     });
 });
 
-// ------------------------------------------------------------------
-// Socket output handling
-// ------------------------------------------------------------------
+// ============================================
+// Socket.IO — stream output
+// ============================================
+
 socket.on('output', (data) => {
     const text = data.text || '';
-    const span = document.createElement('span');
 
-    // Color code certain lines
+    const span = document.createElement('span');
+    span.className = 'line';
+
     if (text.startsWith('$')) {
-        span.className = 'cmd';
+        span.classList.add('cmd');
     } else if (text.includes('[ERROR]') || text.includes('[CANCELLED]')) {
-        span.className = 'error';
+        span.classList.add('error');
     } else if (text.includes('[COMPLETED]') || text.includes('Pipeline complete') || text.includes('Done!')) {
-        span.className = 'success';
+        span.classList.add('success');
     }
 
     span.textContent = text;
     terminal.appendChild(span);
 
-    // Auto-scroll
-    terminal.parentElement.scrollTop = terminal.parentElement.scrollHeight;
+    // Smooth auto-scroll
+    const scrollEl = terminal.parentElement;
+    scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'smooth' });
 
     if (data.done) {
         setRunning(false);
     }
 });
 
+socket.on('connect', () => {
+    connDot.classList.remove('disconnected');
+    connDot.title = 'Connected';
+    if (!isRunning) statusText.textContent = 'Ready';
+});
+
 socket.on('disconnect', () => {
+    connDot.classList.add('disconnected');
+    connDot.title = 'Disconnected';
     statusText.textContent = 'Disconnected';
 });
 
-socket.on('connect', () => {
-    if (!isRunning) statusText.textContent = 'Connected';
-});
+// ============================================
+// Command dispatch
+// ============================================
 
-// ------------------------------------------------------------------
-// Command execution
-// ------------------------------------------------------------------
 function runCommand(action, args = {}) {
     if (isRunning) return;
     setRunning(true);
     clearTerminal();
 
-    // For UFC, use the richer UFC-specific CLI when predicting
     let actualAction = action;
     if (currentSport === 'ufc' && action === 'predict') {
         actualAction = 'ufc_predict';
@@ -131,16 +163,22 @@ function runCommand(action, args = {}) {
 function setRunning(running) {
     isRunning = running;
     btnCancel.disabled = !running;
-    statusText.textContent = running ? 'Running...' : 'Idle';
-    statusBar.className = running ? 'status-bar running' : 'status-bar';
 
-    // Disable/enable action buttons
-    document.querySelectorAll('.btn:not(.btn-sm)').forEach(btn => {
-        if (btn.id !== 'btn-cancel') btn.disabled = running;
+    if (running) {
+        statusPill.classList.add('running');
+        statusText.textContent = 'Running';
+    } else {
+        statusPill.classList.remove('running');
+        statusText.textContent = 'Ready';
+    }
+
+    // Disable/enable buttons
+    document.querySelectorAll('.btn-primary, .btn-secondary').forEach(btn => {
+        btn.disabled = running;
     });
-    document.querySelectorAll('.tab').forEach(t => {
-        t.style.pointerEvents = running ? 'none' : 'auto';
-        t.style.opacity = running ? '0.5' : '1';
+    segments.forEach(s => {
+        s.style.pointerEvents = running ? 'none' : 'auto';
+        s.style.opacity = running ? '0.5' : '1';
     });
 }
 
@@ -148,9 +186,9 @@ function clearTerminal() {
     terminal.innerHTML = '';
 }
 
-// ------------------------------------------------------------------
+// ============================================
 // Button handlers
-// ------------------------------------------------------------------
+// ============================================
 
 // Predict
 document.getElementById('btn-predict').addEventListener('click', () => {
@@ -158,18 +196,20 @@ document.getElementById('btn-predict').addEventListener('click', () => {
     const entityB = document.getElementById('entity-b').value;
 
     if (!entityA || !entityB) {
-        terminal.innerHTML = '<span class="error">Enter both names to predict.</span>';
+        clearTerminal();
+        const msg = document.createElement('span');
+        msg.className = 'line muted';
+        msg.textContent = 'Enter both names to run a prediction.';
+        terminal.appendChild(msg);
         return;
     }
 
-    const args = {
+    runCommand('predict', {
         entity_a: entityA,
         entity_b: entityB,
         date: document.getElementById('predict-date').value || '',
         model: document.getElementById('predict-model').value || '',
-    };
-
-    runCommand('predict', args);
+    });
 });
 
 // Scrape
@@ -177,7 +217,7 @@ document.getElementById('btn-scrape').addEventListener('click', () => {
     runCommand('scrape');
 });
 
-// Train (run-full)
+// Train
 document.getElementById('btn-train').addEventListener('click', () => {
     const dataPath = document.getElementById('data-path').value ||
                      SPORT_CONFIG[currentSport].defaultData;
@@ -190,7 +230,11 @@ document.getElementById('btn-ingest').addEventListener('click', () => {
     const rssUrl = document.getElementById('ingest-rss').value;
 
     if (!sourceDir && !rssUrl) {
-        terminal.innerHTML = '<span class="error">Enter a directory or RSS URL to ingest.</span>';
+        clearTerminal();
+        const msg = document.createElement('span');
+        msg.className = 'line muted';
+        msg.textContent = 'Enter a directory path or RSS URL to ingest.';
+        terminal.appendChild(msg);
         return;
     }
 
@@ -205,19 +249,23 @@ btnCancel.addEventListener('click', () => {
 // Clear
 btnClear.addEventListener('click', () => {
     clearTerminal();
-    terminal.innerHTML = '<span class="muted">Ready.</span>';
+    const msg = document.createElement('span');
+    msg.className = 'line muted';
+    msg.textContent = 'Select a sport and run a command to get started.';
+    terminal.appendChild(msg);
 });
 
-// Enter key triggers predict
+// Enter key on entity inputs triggers predict
 document.querySelectorAll('#entity-a, #entity-b').forEach(input => {
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') document.getElementById('btn-predict').click();
     });
 });
 
-// ------------------------------------------------------------------
-// Load models list on startup
-// ------------------------------------------------------------------
+// ============================================
+// Load models on startup
+// ============================================
+
 fetch('/api/models')
     .then(r => r.json())
     .then(models => {

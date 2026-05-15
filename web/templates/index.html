@@ -4,109 +4,171 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sports Predict</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="app">
-        <!-- Header -->
-        <header>
-            <h1>Sports Predict</h1>
-            <div class="sport-tabs">
-                <button class="tab active" data-sport="ufc">UFC</button>
-                <button class="tab" data-sport="soccer">Soccer</button>
-                <button class="tab" data-sport="mlb">MLB</button>
+        <!-- Nav bar -->
+        <nav class="navbar">
+            <div class="nav-left">
+                <div class="logo">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                    <span>Sports Predict</span>
+                </div>
             </div>
-        </header>
+            <div class="nav-center">
+                <div class="segmented-control">
+                    <button class="segment active" data-sport="ufc">
+                        <span class="segment-icon">&#9878;</span>
+                        UFC
+                    </button>
+                    <button class="segment" data-sport="soccer">
+                        <span class="segment-icon">&#9917;</span>
+                        Soccer
+                    </button>
+                    <button class="segment" data-sport="mlb">
+                        <span class="segment-icon">&#9918;</span>
+                        MLB
+                    </button>
+                    <div class="segment-indicator"></div>
+                </div>
+            </div>
+            <div class="nav-right">
+                <div class="connection-dot" id="connection-dot" title="Connected"></div>
+            </div>
+        </nav>
 
+        <!-- Main content -->
         <main>
-            <!-- Left panel: Controls -->
-            <section class="panel controls">
+            <!-- Sidebar -->
+            <aside class="sidebar">
                 <!-- Predict Card -->
-                <div class="card" id="predict-card">
-                    <h2>Predict</h2>
-                    <div class="form-group">
-                        <label id="label-a">Fighter A</label>
-                        <input type="text" id="entity-a" placeholder="Islam Makhachev">
+                <div class="card card-predict">
+                    <div class="card-header">
+                        <h2>Prediction</h2>
                     </div>
-                    <div class="vs-badge">VS</div>
-                    <div class="form-group">
-                        <label id="label-b">Fighter B</label>
-                        <input type="text" id="entity-b" placeholder="Charles Oliveira">
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group half">
-                            <label>Date</label>
-                            <input type="date" id="predict-date">
+                    <div class="card-body">
+                        <div class="matchup-inputs">
+                            <div class="entity-input">
+                                <label id="label-a">Fighter A</label>
+                                <input type="text" id="entity-a" placeholder="Islam Makhachev" autocomplete="off" spellcheck="false">
+                            </div>
+                            <div class="vs-divider">
+                                <span>vs</span>
+                            </div>
+                            <div class="entity-input">
+                                <label id="label-b">Fighter B</label>
+                                <input type="text" id="entity-b" placeholder="Charles Oliveira" autocomplete="off" spellcheck="false">
+                            </div>
                         </div>
-                        <div class="form-group half">
-                            <label>Model</label>
-                            <select id="predict-model">
-                                <option value="">Default</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <!-- UFC-specific options -->
-                    <div class="ufc-opts" id="ufc-options">
-                        <div class="form-row">
-                            <div class="form-group half">
-                                <label>Rounds</label>
-                                <select id="predict-rounds">
-                                    <option value="3">3</option>
-                                    <option value="5">5</option>
+                        <div class="options-row">
+                            <div class="field">
+                                <label>Date</label>
+                                <input type="date" id="predict-date">
+                            </div>
+                            <div class="field">
+                                <label>Model</label>
+                                <select id="predict-model">
+                                    <option value="">Default</option>
                                 </select>
                             </div>
                         </div>
-                    </div>
 
-                    <button class="btn primary" id="btn-predict">Run Prediction</button>
+                        <div class="options-row ufc-opts" id="ufc-options">
+                            <div class="field">
+                                <label>Rounds</label>
+                                <select id="predict-rounds">
+                                    <option value="3">3 Rounds</option>
+                                    <option value="5">5 Rounds</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button class="btn-primary" id="btn-predict">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            Run Prediction
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Pipeline Card -->
                 <div class="card">
-                    <h2>Pipeline</h2>
-                    <div class="btn-group">
-                        <button class="btn" id="btn-scrape">Scrape Data</button>
-                        <button class="btn" id="btn-train">Train Model</button>
+                    <div class="card-header">
+                        <h2>Pipeline</h2>
                     </div>
-                    <div class="form-group" id="data-path-group">
-                        <label>Data path</label>
-                        <input type="text" id="data-path" placeholder="data/raw/ufcstats_fights.csv">
+                    <div class="card-body">
+                        <div class="action-buttons">
+                            <button class="btn-secondary" id="btn-scrape">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Scrape Data
+                            </button>
+                            <button class="btn-secondary" id="btn-train">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                                Train Model
+                            </button>
+                        </div>
+                        <div class="field">
+                            <label>Data path</label>
+                            <input type="text" id="data-path" placeholder="data/raw/ufcstats_fights.csv" spellcheck="false">
+                        </div>
                     </div>
                 </div>
 
                 <!-- RAG Ingest Card -->
                 <div class="card">
-                    <h2>RAG Ingest</h2>
-                    <div class="form-group">
-                        <label>Article directory</label>
-                        <input type="text" id="ingest-dir" placeholder="data/articles">
+                    <div class="card-header">
+                        <h2>RAG Ingest</h2>
                     </div>
-                    <div class="form-group">
-                        <label>RSS URL</label>
-                        <input type="text" id="ingest-rss" placeholder="https://mmajunkie.usatoday.com/feed">
+                    <div class="card-body">
+                        <div class="field">
+                            <label>Article directory</label>
+                            <input type="text" id="ingest-dir" placeholder="data/articles" spellcheck="false">
+                        </div>
+                        <div class="field">
+                            <label>RSS feed URL</label>
+                            <input type="text" id="ingest-rss" placeholder="https://mmajunkie.usatoday.com/feed" spellcheck="false">
+                        </div>
+                        <button class="btn-secondary full" id="btn-ingest">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                            Ingest Articles
+                        </button>
                     </div>
-                    <button class="btn" id="btn-ingest">Ingest</button>
                 </div>
-            </section>
+            </aside>
 
-            <!-- Right panel: Output terminal -->
-            <section class="panel output">
-                <div class="terminal-header">
-                    <span>Output</span>
-                    <div class="terminal-actions">
-                        <button class="btn-sm" id="btn-cancel" disabled>Cancel</button>
-                        <button class="btn-sm" id="btn-clear">Clear</button>
+            <!-- Terminal panel -->
+            <section class="terminal-panel">
+                <div class="terminal-toolbar">
+                    <div class="toolbar-left">
+                        <div class="window-dots">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                        </div>
+                        <span class="toolbar-title">Output</span>
+                    </div>
+                    <div class="toolbar-right">
+                        <span class="status-pill" id="status-pill">
+                            <span class="status-dot" id="status-dot"></span>
+                            <span id="status-text">Ready</span>
+                        </span>
+                        <button class="toolbar-btn" id="btn-cancel" disabled>Cancel</button>
+                        <button class="toolbar-btn" id="btn-clear">Clear</button>
                     </div>
                 </div>
-                <div class="terminal" id="terminal">
+                <div class="terminal-scroll" id="terminal">
                     <div class="terminal-content" id="terminal-content">
-                        <span class="muted">Ready. Select a sport and run a command.</span>
+                        <span class="line muted">Select a sport and run a command to get started.</span>
                     </div>
                 </div>
-                <div class="status-bar" id="status-bar">
-                    <span id="status-text">Idle</span>
-                    <span id="status-sport" class="badge">UFC</span>
+                <div class="terminal-footer">
+                    <span id="footer-sport" class="sport-badge">UFC</span>
                 </div>
             </section>
         </main>
