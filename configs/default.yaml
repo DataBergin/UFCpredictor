@@ -22,6 +22,15 @@ features:
   age:
     peak_age: 29
     decline_rate: 0.02
+  rag:
+    enabled: false
+    ollama_model: "mistral"
+    embedding_model: "nomic-embed-text"
+    vectorstore_dir: "data/vectorstore"
+    chunk_size: 1000
+    max_docs_per_fight: 10
+    cache_dir: "data/cache/rag_features"
+    sport: "ufc"
 
 models:
   split:

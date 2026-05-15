@@ -70,6 +70,58 @@ def scrape(ctx, source, output):
 
 
 @cli.command()
+@click.option("--source-dir", default=None, help="Directory of text/HTML articles to ingest")
+@click.option("--rss-url", default=None, help="RSS feed URL to ingest")
+@click.option("--fights-csv", default="data/raw/ufcstats_fights.csv",
+              help="Fight data CSV for building fighter roster")
+@click.option("--default-date", default="", help="Default date (YYYY-MM-DD) for undated articles")
+@click.pass_context
+def ingest(ctx, source_dir, rss_url, fights_csv, default_date):
+    """Ingest articles and news into the RAG vector store.
+
+    Examples:
+        ufc-predict ingest --source-dir data/articles
+        ufc-predict ingest --rss-url https://mmajunkie.usatoday.com/feed
+    """
+    from .rag.store import FightDocumentStore
+    from .rag.ingest import ArticleIngester
+
+    config = get_config(ctx.obj["config_path"])
+    rag_cfg = config.get("features", {}).get("rag", {})
+
+    store = FightDocumentStore(
+        persist_dir=rag_cfg.get("vectorstore_dir", "data/vectorstore"),
+        embedding_model=rag_cfg.get("embedding_model", "nomic-embed-text"),
+    )
+
+    ingester = ArticleIngester(
+        store=store,
+        chunk_size=rag_cfg.get("chunk_size", 1000),
+    )
+
+    # Load fighter roster for name detection
+    if Path(fights_csv).exists():
+        fights_df = pd.read_csv(fights_csv)
+        ingester.set_roster_from_dataframe(fights_df)
+        click.echo(f"Loaded {len(ingester.fighter_roster)} fighters for name detection")
+
+    total = 0
+    if source_dir:
+        click.echo(f"Ingesting from directory: {source_dir}")
+        total += ingester.ingest_from_directory(source_dir, default_date=default_date)
+
+    if rss_url:
+        click.echo(f"Ingesting from RSS: {rss_url}")
+        total += ingester.ingest_from_rss(rss_url)
+
+    if not source_dir and not rss_url:
+        click.echo("Provide --source-dir or --rss-url")
+        return
+
+    click.echo(f"\nIngested {total} document chunks. Store now has {store.count()} total documents.")
+
+
+@cli.command()
 @click.option("--data", required=True, help="Path to fight data CSV/parquet")
 @click.option("--output", default="data/processed/features.parquet", help="Output path for feature matrix")
 @click.pass_context

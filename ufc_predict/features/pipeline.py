@@ -39,6 +39,14 @@ class FeaturePipeline:
         self.matchup = MatchupFeatures()
         self.contextual = ContextualFeatures()
 
+        # RAG features (opt-in, requires Ollama)
+        rag_cfg = cfg.get("rag", {})
+        if rag_cfg.get("enabled", False):
+            from .rag_features import RAGFeatures
+            self.rag = RAGFeatures(rag_cfg)
+        else:
+            self.rag = None
+
         self.fighter_info: dict[str, dict[str, Any]] = {}
 
     def set_fighter_info(self, fighter: str, info: dict[str, Any]) -> None:
@@ -144,6 +152,11 @@ class FeaturePipeline:
         }
         ctx_feats = self.contextual.get_features(info_a, info_b, fight_info)
         features.update(ctx_feats)
+
+        # RAG features (if enabled)
+        if self.rag is not None:
+            rag_feats = self.rag.get_features(fighter_a, fighter_b, fight_date)
+            features.update(rag_feats)
 
         # Odds features (if available)
         odds_feats = self._get_odds_features(row)
