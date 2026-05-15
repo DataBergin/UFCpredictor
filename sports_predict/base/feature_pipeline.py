@@ -90,11 +90,9 @@ class BaseFeaturePipeline(ABC):
         logger.info(f"Generated feature matrix: {df.shape[0]} events, {df.shape[1]} features")
         return df
 
-    @property
-    @abstractmethod
-    def date_column(self) -> str:
-        """Column name containing the event date."""
-        ...
+    # Subclasses should set this as a class attribute, e.g.:
+    #   date_column = "match_date"
+    date_column: str = "event_date"
 
     @abstractmethod
     def get_entities(self, row: pd.Series) -> tuple[str, str]:
@@ -114,6 +112,25 @@ class BaseFeaturePipeline(ABC):
             Dict of target columns — e.g., {"target_winner_is_a": 1, "target_method": 0}
         """
         ...
+
+    def get_features_for_matchup(self, entity_a: str, entity_b: str,
+                                 event_date: str, **context) -> dict[str, float]:
+        """Get features for a new (unpredicted) matchup.
+
+        Uses current state of all feature sources without updating them.
+        Suitable for live predictions.
+        """
+        features: dict[str, float] = {}
+        for source in self.sources:
+            try:
+                source_feats = source.get_features(
+                    entity_a, entity_b, event_date, **context
+                )
+                features.update(source_feats)
+            except Exception as e:
+                logger.warning(f"Feature source {type(source).__name__} failed: {e}")
+                features.update(source.empty_features())
+        return features
 
     @abstractmethod
     def update_sources(self, row: pd.Series) -> None:

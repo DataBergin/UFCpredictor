@@ -20,17 +20,26 @@ class GenericEnsemble:
     Base models produce probability predictions on a validation set,
     which are stacked as features for a meta-learner.
 
+    If no base models are registered, automatically creates default models
+    (LightGBM + LogisticRegression) on first train() call.
+
     Args:
         task: "binary" (2 outcomes) or "multiclass" (3+ outcomes)
         n_classes: Number of output classes (2 for binary, 3 for soccer W/D/L)
+        class_labels: Optional human-readable class labels
         meta_method: "logistic" or "isotonic" for the meta-learner
+        config: Optional model configuration dict
     """
 
     def __init__(self, task: str = "binary", n_classes: int = 2,
-                 meta_method: str = "logistic"):
+                 class_labels: list[str] | None = None,
+                 meta_method: str = "logistic",
+                 config: dict[str, Any] | None = None):
         self.task = task
         self.n_classes = n_classes
+        self.class_labels = class_labels or [str(i) for i in range(n_classes)]
         self.meta_method = meta_method
+        self.config = config or {}
         self.base_models: dict[str, Any] = {}
         self.meta_model = None
         self.is_trained = False
@@ -114,6 +123,65 @@ class GenericEnsemble:
                     preds.append(np.full((len(X), self.n_classes), 1.0 / self.n_classes))
 
         return np.hstack(preds)
+
+    def _ensure_base_models(self, X: pd.DataFrame) -> None:
+        """Create default base models if none are registered."""
+        if self.base_models:
+            return
+
+        logger.info("No base models registered, creating defaults")
+
+        # LightGBM
+        try:
+            import lightgbm as lgb
+            if self.task == "binary":
+                self.base_models["lgbm"] = lgb.LGBMClassifier(
+                    n_estimators=200, learning_rate=0.05, max_depth=6,
+                    num_leaves=31, verbose=-1,
+                )
+            else:
+                self.base_models["lgbm"] = lgb.LGBMClassifier(
+                    n_estimators=200, learning_rate=0.05, max_depth=6,
+                    num_leaves=31, verbose=-1, objective="multiclass",
+                    num_class=self.n_classes,
+                )
+        except ImportError:
+            logger.warning("LightGBM not available, using sklearn only")
+
+        # Logistic Regression
+        if self.task == "binary":
+            self.base_models["lr"] = LogisticRegression(
+                max_iter=1000, C=1.0,
+            )
+        else:
+            self.base_models["lr"] = LogisticRegression(
+                max_iter=1000, C=1.0, multi_class="multinomial",
+            )
+
+    def train(self, X_train: pd.DataFrame, y_train: pd.Series,
+              X_val: pd.DataFrame, y_val: pd.Series,
+              **fit_kwargs) -> None:
+        """Train the ensemble (alias for fit with auto-model creation)."""
+        self._ensure_base_models(X_train)
+        self.fit(X_train, y_train, X_val, y_val, **fit_kwargs)
+
+    def predict_proba(self, X: pd.DataFrame, **kwargs) -> np.ndarray:
+        """Get class probabilities from the ensemble.
+
+        Returns:
+            For binary: (n_samples, 2) array
+            For multiclass: (n_samples, n_classes) array
+        """
+        meta_features = self._get_meta_features(X, **kwargs)
+
+        if self.task == "binary":
+            if self.meta_method == "logistic":
+                return self.meta_model.predict_proba(meta_features)
+            else:
+                probs_1 = self.meta_model.transform(meta_features.mean(axis=1))
+                return np.column_stack([1 - probs_1, probs_1])
+        else:
+            return self.meta_model.predict_proba(meta_features)
 
     def feature_importance_combined(self) -> pd.DataFrame:
         """Aggregate feature importance across base models that support it."""
