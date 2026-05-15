@@ -12,6 +12,7 @@ from .team_elo import SoccerEloSystem
 from .squad import SquadFeatures
 from .tournament import TournamentFeatures
 from .international import InternationalFeatures
+from .club_form import ClubFormFeatures
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,11 @@ class SoccerFeaturePipeline(BaseFeaturePipeline):
         self.register_source(SquadFeatures())
         self.register_source(TournamentFeatures())
         self.register_source(InternationalFeatures())
+
+        # Club form: how national team players perform at their clubs
+        club_cfg = cfg.get("club_form", {})
+        aggregator = club_cfg.get("aggregator", None)
+        self.register_source(ClubFormFeatures(aggregator=aggregator))
 
         # RAG (opt-in)
         rag_cfg = cfg.get("rag", {})

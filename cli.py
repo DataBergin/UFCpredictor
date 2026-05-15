@@ -102,7 +102,7 @@ def scrape(ctx, output):
         click.echo(f"  Saved {len(df)} fights to {out_path}")
 
     elif sport == "soccer":
-        from soccer_predict.scrapers import FBrefScraper, FIFARankingsScraper
+        from soccer_predict.scrapers import FBrefScraper, FIFARankingsScraper, ClubLeagueScraper
         click.echo("Scraping FBref World Cup matches...")
         scraper = FBrefScraper(cache_dir="data/cache")
         df = scraper.scrape_all()
@@ -116,6 +116,13 @@ def scrape(ctx, output):
         rank_path = output_dir / "fifa_rankings.csv"
         rank_df.to_csv(rank_path, index=False)
         click.echo(f"  Saved {len(rank_df)} ranking entries to {rank_path}")
+
+        click.echo("Scraping top-5 European club leagues (PL, La Liga, BuLi, Serie A, Ligue 1)...")
+        club_scraper = ClubLeagueScraper(cache_dir="data/cache")
+        club_df = club_scraper.scrape_all_leagues()
+        club_path = output_dir / "club_league_matches.csv"
+        club_df.to_csv(club_path, index=False)
+        click.echo(f"  Saved {len(club_df)} club matches to {club_path}")
 
     elif sport == "mlb":
         from mlb_predict.scrapers import BaseballReferenceScraper, FanGraphsScraper
