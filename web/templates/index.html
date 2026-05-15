@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sports Predict</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header>
+            <h1>Sports Predict</h1>
+            <div class="sport-tabs">
+                <button class="tab active" data-sport="ufc">UFC</button>
+                <button class="tab" data-sport="soccer">Soccer</button>
+                <button class="tab" data-sport="mlb">MLB</button>
+            </div>
+        </header>
+
+        <main>
+            <!-- Left panel: Controls -->
+            <section class="panel controls">
+                <!-- Predict Card -->
+                <div class="card" id="predict-card">
+                    <h2>Predict</h2>
+                    <div class="form-group">
+                        <label id="label-a">Fighter A</label>
+                        <input type="text" id="entity-a" placeholder="Islam Makhachev">
+                    </div>
+                    <div class="vs-badge">VS</div>
+                    <div class="form-group">
+                        <label id="label-b">Fighter B</label>
+                        <input type="text" id="entity-b" placeholder="Charles Oliveira">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label>Date</label>
+                            <input type="date" id="predict-date">
+                        </div>
+                        <div class="form-group half">
+                            <label>Model</label>
+                            <select id="predict-model">
+                                <option value="">Default</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- UFC-specific options -->
+                    <div class="ufc-opts" id="ufc-options">
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label>Rounds</label>
+                                <select id="predict-rounds">
+                                    <option value="3">3</option>
+                                    <option value="5">5</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn primary" id="btn-predict">Run Prediction</button>
+                </div>
+
+                <!-- Pipeline Card -->
+                <div class="card">
+                    <h2>Pipeline</h2>
+                    <div class="btn-group">
+                        <button class="btn" id="btn-scrape">Scrape Data</button>
+                        <button class="btn" id="btn-train">Train Model</button>
+                    </div>
+                    <div class="form-group" id="data-path-group">
+                        <label>Data path</label>
+                        <input type="text" id="data-path" placeholder="data/raw/ufcstats_fights.csv">
+                    </div>
+                </div>
+
+                <!-- RAG Ingest Card -->
+                <div class="card">
+                    <h2>RAG Ingest</h2>
+                    <div class="form-group">
+                        <label>Article directory</label>
+                        <input type="text" id="ingest-dir" placeholder="data/articles">
+                    </div>
+                    <div class="form-group">
+                        <label>RSS URL</label>
+                        <input type="text" id="ingest-rss" placeholder="https://mmajunkie.usatoday.com/feed">
+                    </div>
+                    <button class="btn" id="btn-ingest">Ingest</button>
+                </div>
+            </section>
+
+            <!-- Right panel: Output terminal -->
+            <section class="panel output">
+                <div class="terminal-header">
+                    <span>Output</span>
+                    <div class="terminal-actions">
+                        <button class="btn-sm" id="btn-cancel" disabled>Cancel</button>
+                        <button class="btn-sm" id="btn-clear">Clear</button>
+                    </div>
+                </div>
+                <div class="terminal" id="terminal">
+                    <div class="terminal-content" id="terminal-content">
+                        <span class="muted">Ready. Select a sport and run a command.</span>
+                    </div>
+                </div>
+                <div class="status-bar" id="status-bar">
+                    <span id="status-text">Idle</span>
+                    <span id="status-sport" class="badge">UFC</span>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>
